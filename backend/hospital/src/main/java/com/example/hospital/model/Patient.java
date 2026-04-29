@@ -9,6 +9,7 @@ public class Patient {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "PatientID")
     private Integer patientID;
 
     @Column(name = "FirstName")
