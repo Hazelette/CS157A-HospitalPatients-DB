@@ -14,8 +14,8 @@ INSERT INTO Departments (DepartmentName, Location) VALUES
 INSERT INTO Doctors (DoctorName, Specialty, Phone, Email, DepartmentID) VALUES
 ('Dr. Alice Smith', 'Cardiologist', '1234567890', 'alice@hospital.com', 1),
 ('Dr. Bob Johnson', 'Neurologist', '2345678901', 'bob@hospital.com', 2),
-('Dr. Carol Lee', 'Orthopedic Surgeon', '3456789012', 'carol@hospital.com', 3);
-
+('Dr. Carol Lee', 'Orthopedic Surgeon', '3456789012', 'carol@hospital.com', 3),
+('Dr. John Lee', 'Dermatology', '5559998888', 'johnlee@hospital.com', 1);
 -- ----------------------
 -- Patients
 -- ----------------------
@@ -38,7 +38,8 @@ INSERT INTO Rooms (RoomNumber, Availability) VALUES
 INSERT INTO Appointments (PatientID, DoctorID, AppointmentDate, AppointmentTime, Status) VALUES
 (1, 1, '2026-05-01', '10:00:00', 'Scheduled'),
 (2, 2, '2026-05-02', '11:30:00', 'Completed'),
-(3, 3, '2026-05-03', '09:15:00', 'Cancelled');
+(3, 3, '2026-05-03', '09:15:00', 'Cancelled'),
+(1, 4, '2026-05-05', '14:30:00', 'Scheduled');
 
 -- ----------------------
 -- Admissions
