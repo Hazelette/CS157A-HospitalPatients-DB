@@ -1,7 +1,8 @@
 package com.example.hospital.controller;
 
+import com.example.hospital.dao.DepartmentDAO;
 import com.example.hospital.model.Department;
-import com.example.hospital.repository.DepartmentRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,14 +12,18 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:3000")
 public class DepartmentController {
 
-    private final DepartmentRepository departmentRepository;
+    private final DepartmentDAO departmentDAO;
 
-    public DepartmentController(DepartmentRepository departmentRepository) {
-        this.departmentRepository = departmentRepository;
+    public DepartmentController(DepartmentDAO departmentDAO) {
+        this.departmentDAO = departmentDAO;
     }
 
     @GetMapping
-    public List<Department> getAllDepartments() {
-        return departmentRepository.findAll();
+    public ResponseEntity<List<Department>> getAllDepartments() {
+        try {
+            return ResponseEntity.ok(departmentDAO.getAllDepartments());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }
