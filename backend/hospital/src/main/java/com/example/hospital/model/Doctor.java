@@ -1,29 +1,17 @@
 package com.example.hospital.model;
 
-import jakarta.persistence.*;
-
-@Entity
-@Table(name = "Doctors")
 public class Doctor {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "DoctorID")
     private Integer doctorID;
 
-    @Column(name = "DoctorName")
     private String doctorName;
 
-    @Column(name = "Specialty")
     private String specialty;
 
-    @Column(name = "Phone")
     private String phone;
 
-    @Column(name = "Email")
     private String email;
 
-    @Column(name = "DepartmentID")
     private Integer departmentID;
 
     public Doctor() {

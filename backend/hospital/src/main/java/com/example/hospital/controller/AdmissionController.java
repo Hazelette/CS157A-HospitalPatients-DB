@@ -1,7 +1,8 @@
 package com.example.hospital.controller;
 
+import com.example.hospital.dao.AdmissionDAO;
 import com.example.hospital.model.Admission;
-import com.example.hospital.repository.AdmissionRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,19 +12,27 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:3000")
 public class AdmissionController {
 
-    private final AdmissionRepository admissionRepository;
+    private final AdmissionDAO admissionDAO;
 
-    public AdmissionController(AdmissionRepository admissionRepository) {
-        this.admissionRepository = admissionRepository;
+    public AdmissionController(AdmissionDAO admissionDAO) {
+        this.admissionDAO = admissionDAO;
     }
 
     @GetMapping
-    public List<Admission> getAllAdmissions() {
-        return admissionRepository.findAll();
+    public ResponseEntity<List<Admission>> getAllAdmissions() {
+        try {
+            return ResponseEntity.ok(admissionDAO.getAllAdmissions());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PostMapping
-    public Admission createAdmission(@RequestBody Admission admission) {
-        return admissionRepository.save(admission);
+    public ResponseEntity<Admission> createAdmission(@RequestBody Admission admission) {
+        try {
+            return ResponseEntity.ok(admissionDAO.createAdmission(admission));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

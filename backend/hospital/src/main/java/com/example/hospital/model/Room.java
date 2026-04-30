@@ -1,20 +1,11 @@
 package com.example.hospital.model;
 
-import jakarta.persistence.*;
-
-@Entity
-@Table(name = "Rooms")
 public class Room {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "RoomID")
     private Integer roomID;
 
-    @Column(name = "RoomNumber")
     private String roomNumber;
 
-    @Column(name = "Availability")
     private String availability;
 
     public Room() {

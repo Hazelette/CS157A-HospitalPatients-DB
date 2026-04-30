@@ -1,7 +1,8 @@
 package com.example.hospital.controller;
 
+import com.example.hospital.dao.RoomDAO;
 import com.example.hospital.model.Room;
-import com.example.hospital.repository.RoomRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,19 +12,27 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:3000")
 public class RoomController {
 
-    private final RoomRepository roomRepository;
+    private final RoomDAO roomDAO;
 
-    public RoomController(RoomRepository roomRepository) {
-        this.roomRepository = roomRepository;
+    public RoomController(RoomDAO roomDAO) {
+        this.roomDAO = roomDAO;
     }
 
     @GetMapping
-    public List<Room> getAllRooms() {
-        return roomRepository.findAll();
+    public ResponseEntity<List<Room>> getAllRooms() {
+        try {
+            return ResponseEntity.ok(roomDAO.getAllRooms());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @GetMapping("/available")
-    public List<Room> getAvailableRooms() {
-        return roomRepository.findByAvailability("Available");
+    public ResponseEntity<List<Room>> getAvailableRooms() {
+        try {
+            return ResponseEntity.ok(roomDAO.getRoomsByAvailability("Available"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }
