@@ -1,36 +1,15 @@
 package com.example.hospital.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDate;
 
-@Entity
-@Table(name = "Patients")
 public class Patient {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "PatientID")
     private Integer patientID;
-
-    @Column(name = "FirstName")
     private String firstName;
-
-    @Column(name = "LastName")
     private String lastName;
-
-    @Column(name = "Gender")
     private String gender;
-
-    @Column(name = "DateOfBirth")
     private LocalDate dateOfBirth;
-
-    @Column(name = "Phone")
     private String phone;
-
-    @Column(name = "Address")
     private String address;
-
-    @Column(name = "BloodGroup")
     private String bloodGroup;
 
     public Patient() {

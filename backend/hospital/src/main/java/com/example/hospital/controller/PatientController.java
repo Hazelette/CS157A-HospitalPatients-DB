@@ -1,7 +1,7 @@
 package com.example.hospital.controller;
 
+import com.example.hospital.dao.PatientDAO;
 import com.example.hospital.model.Patient;
-import com.example.hospital.repository.PatientRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,29 +12,38 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:3000")
 public class PatientController {
 
-    private final PatientRepository patientRepository;
+    private final PatientDAO patientDAO;
 
-    public PatientController(PatientRepository patientRepository) {
-        this.patientRepository = patientRepository;
+    public PatientController(PatientDAO patientDAO) {
+        this.patientDAO = patientDAO;
     }
 
     @GetMapping
-    public List<Patient> getAllPatients() {
-        return patientRepository.findAll();
+    public ResponseEntity<List<Patient>> getAllPatients() {
+        try {
+            return ResponseEntity.ok(patientDAO.getAllPatients());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PostMapping
-    public Patient createPatient(@RequestBody Patient patient) {
-        return patientRepository.save(patient);
+    public ResponseEntity<Patient> createPatient(@RequestBody Patient patient) {
+        try {
+            return ResponseEntity.ok(patientDAO.createPatient(patient));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePatient(@PathVariable Integer id) {
-        if (!patientRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<Void> deletePatient(@PathVariable int id) {
+        try {
+            boolean deleted = patientDAO.deletePatient(id);
+            return deleted ? ResponseEntity.noContent().build()
+                           : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
-
-        patientRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
     }
 }
