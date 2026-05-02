@@ -54,6 +54,34 @@ If either one is not running, frontend pages will show network/fetch errors.
   - `DB_PASSWORD` (default: empty)
 - The frontend communicates with the backend via HTTP requests.
 
+### 7. Docker (full stack)
+You can run MySQL + backend + frontend together with Docker Compose:
+
+Create a local env file first:
+```bash
+cp .env.example .env
+```
+Then edit `.env` and set a real `MYSQL_ROOT_PASSWORD`.
+
+```bash
+docker compose up --build
+```
+
+Services:
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:8080`
+- MySQL: `localhost:3307` (password from your local `.env`)
+
+Stop containers:
+```bash
+docker compose down
+```
+
+Reset DB volume (fresh schema + seed on next up):
+```bash
+docker compose down -v
+```
+
 ## Overview
 Our project is a patient management system for hospitals that enables efficient tracking of patient locations, doctor-patient assignments, and appointment scheduling.
 
