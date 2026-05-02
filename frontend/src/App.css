@@ -207,6 +207,133 @@ input::placeholder {
   box-sizing: border-box;
 }
 
+/* Appointments: read-only day filter (DB) */
+.appointments-schedule-preview {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 22px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 14px rgba(26, 31, 54, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.appointments-schedule-preview-title {
+  margin: 0 0 6px 0;
+  font-size: 1.1rem;
+  color: #1a1f36;
+}
+
+.appointments-schedule-preview-hint {
+  margin: 0 0 16px 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.appointments-schedule-preview-controls {
+  margin-bottom: 14px;
+}
+
+.appointments-schedule-date-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.appointments-schedule-date-label input[type="date"] {
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.appointments-schedule-preview-status,
+.appointments-schedule-preview-empty {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.appointments-schedule-preview-error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.95rem;
+}
+
+.appointments-schedule-table {
+  margin-top: 4px;
+}
+
+/* Rooms: live availability (DB) */
+.rooms-live-panel {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 22px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 14px rgba(26, 31, 54, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.rooms-live-panel-title {
+  margin: 0 0 6px 0;
+  font-size: 1.1rem;
+  color: #1a1f36;
+}
+
+.rooms-live-panel-hint {
+  margin: 0 0 14px 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.rooms-live-panel-status,
+.rooms-live-panel-count {
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.rooms-live-panel-error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.95rem;
+}
+
+.rooms-live-panel-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.rooms-live-check-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.rooms-live-check-label input {
+  min-width: 140px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.rooms-live-check-btn {
+  margin-bottom: 1px;
+}
+
+.rooms-live-panel-result {
+  margin: 14px 0 0 0;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
 .search-bars {
   display: flex;
   gap: 15px;
