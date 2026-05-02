@@ -55,13 +55,22 @@ If either one is not running, frontend pages will show network/fetch errors.
 - The frontend communicates with the backend via HTTP requests.
 
 ### 7. Docker (full stack)
+Prerequisite: Docker Desktop must be installed and running.
+
 You can run MySQL + backend + frontend together with Docker Compose:
 
 Create a local env file first:
 ```bash
 cp .env.example .env
 ```
+```powershell
+Copy-Item .env.example .env
+```
 Then edit `.env` and set a real `MYSQL_ROOT_PASSWORD`.
+
+Run the following commands from the project root directory.
+
+The first build may take several minutes.
 
 ```bash
 docker compose up --build
@@ -72,6 +81,8 @@ Services:
 - Backend API: `http://localhost:8080`
 - MySQL: `localhost:3307` (password from your local `.env`)
 
+MySQL is exposed on port `3307` to avoid conflicts with a local MySQL installation on port `3306`.
+
 Stop containers:
 ```bash
 docker compose down
@@ -80,6 +91,11 @@ docker compose down
 Reset DB volume (fresh schema + seed on next up):
 ```bash
 docker compose down -v
+```
+
+View container logs:
+```bash
+docker compose logs -f
 ```
 
 ## Overview
