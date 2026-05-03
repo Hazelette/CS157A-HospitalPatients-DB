@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { API_BASE } from "../config";
 import { useMergeState } from "../hooks/useMergeState";
 
 const EMPTY_FORM = {
@@ -12,103 +14,89 @@ const EMPTY_FORM = {
 };
 
 export function PatientsPage() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [state, merge] = useMergeState({
-    patients: [
-      {
-        PatientID: 1,
-        FirstName: "John",
-        LastName: "Doe",
-        Gender: "Male",
-        DateOfBirth: "1994-05-15",
-        Phone: "555-1234",
-        Address: "123 Main St",
-        BloodGroup: "O+",
-      },
-    ],
+    patients: [],
     searchName: "",
     searchID: "",
     ...EMPTY_FORM,
-    editingId: null,
   });
+
+  const loadPatients = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${API_BASE}/patients`);
+      if (!res.ok) throw new Error(`Failed to load patients (${res.status})`);
+      const data = await res.json();
+      merge({ patients: Array.isArray(data) ? data : [] });
+    } catch (e) {
+      setError(e.message || "Failed to load patients.");
+      merge({ patients: [] });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPatients();
+  }, []);
 
   const update = (key, value) => merge({ [key]: value });
 
-  const addPatient = () => {
+  const addPatient = async () => {
     if (!state.PatientID) return;
-    merge({
-      patients: [
-        ...state.patients,
-        {
-          PatientID: parseInt(state.PatientID, 10),
-          FirstName: state.FirstName,
-          LastName: state.LastName,
-          Gender: state.Gender,
-          DateOfBirth: state.DateOfBirth,
-          Phone: state.Phone,
-          Address: state.Address,
-          BloodGroup: state.BloodGroup,
-        },
-      ],
-      ...EMPTY_FORM,
-    });
+    setError("");
+    try {
+      const payload = {
+        patientID: parseInt(state.PatientID, 10),
+        firstName: state.FirstName,
+        lastName: state.LastName,
+        gender: state.Gender,
+        dateOfBirth: state.DateOfBirth || null,
+        phone: state.Phone,
+        address: state.Address,
+        bloodGroup: state.BloodGroup,
+      };
+      const res = await fetch(`${API_BASE}/patients`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`Failed to create patient (${res.status})`);
+      merge({ ...EMPTY_FORM });
+      await loadPatients();
+    } catch (e) {
+      setError(e.message || "Failed to create patient.");
+    }
   };
 
-  const deletePatient = (id) =>
-    merge((s) => ({ patients: s.patients.filter((p) => p.PatientID !== id) }));
-
-  const startEdit = (patient) =>
-    merge({
-      editingId: patient.PatientID,
-      PatientID: patient.PatientID,
-      FirstName: patient.FirstName,
-      LastName: patient.LastName,
-      Gender: patient.Gender,
-      DateOfBirth: patient.DateOfBirth,
-      Phone: patient.Phone,
-      Address: patient.Address,
-      BloodGroup: patient.BloodGroup,
-    });
-
-  const saveEdit = () => {
-    if (!state.PatientID) return;
-    merge({
-      patients: state.patients.map((p) =>
-        p.PatientID === state.editingId
-          ? {
-              PatientID: parseInt(state.PatientID, 10),
-              FirstName: state.FirstName,
-              LastName: state.LastName,
-              Gender: state.Gender,
-              DateOfBirth: state.DateOfBirth,
-              Phone: state.Phone,
-              Address: state.Address,
-              BloodGroup: state.BloodGroup,
-            }
-          : p
-      ),
-      editingId: null,
-      ...EMPTY_FORM,
-    });
+  const deletePatient = async (id) => {
+    setError("");
+    try {
+      const res = await fetch(`${API_BASE}/patients/${id}`, { method: "DELETE" });
+      if (!res.ok && res.status !== 404) {
+        throw new Error(`Failed to delete patient (${res.status})`);
+      }
+      await loadPatients();
+    } catch (e) {
+      setError(e.message || "Failed to delete patient.");
+    }
   };
-
-  const cancelEdit = () =>
-    merge({
-      editingId: null,
-      ...EMPTY_FORM,
-    });
 
   const filtered = state.patients.filter((p) => {
-    const nameMatch = `${p.FirstName} ${p.LastName}`
-      .toLowerCase()
-      .includes(state.searchName.toLowerCase());
-    const idMatch = p.PatientID.toString().includes(state.searchID);
+    const fullName = `${p.firstName ?? ""} ${p.lastName ?? ""}`.toLowerCase();
+    const nameMatch = fullName.includes(state.searchName.toLowerCase());
+    const idMatch = String(p.patientID ?? "").includes(state.searchID);
     return (state.searchName === "" || nameMatch) && (state.searchID === "" || idMatch);
   });
 
   return (
     <div>
       <h2>Patients</h2>
-
+      {loading && <p>Loading...</p>}
+      {!loading && error && <p>{error}</p>}
       <div className="search-bars">
         <input
           placeholder="Search by name..."
@@ -131,12 +119,7 @@ export function PatientsPage() {
         <input placeholder="Phone" value={state.Phone} onChange={(e) => update("Phone", e.target.value)} />
         <input placeholder="Address" value={state.Address} onChange={(e) => update("Address", e.target.value)} />
         <input placeholder="Blood Group" value={state.BloodGroup} onChange={(e) => update("BloodGroup", e.target.value)} />
-        <button onClick={state.editingId ? saveEdit : addPatient}>{state.editingId ? "Save" : "Add"}</button>
-        {state.editingId && (
-          <button onClick={cancelEdit} className="cancel-btn">
-            Cancel
-          </button>
-        )}
+        <button onClick={addPatient}>Add</button>
       </div>
 
       <table>
@@ -155,20 +138,17 @@ export function PatientsPage() {
         </thead>
         <tbody>
           {filtered.map((p) => (
-            <tr key={p.PatientID}>
-              <td>{p.PatientID}</td>
-              <td>{p.FirstName}</td>
-              <td>{p.LastName}</td>
-              <td>{p.Gender}</td>
-              <td>{p.DateOfBirth}</td>
-              <td>{p.Phone}</td>
-              <td>{p.Address}</td>
-              <td>{p.BloodGroup}</td>
+            <tr key={p.patientID}>
+              <td>{p.patientID}</td>
+              <td>{p.firstName}</td>
+              <td>{p.lastName}</td>
+              <td>{p.gender}</td>
+              <td>{p.dateOfBirth}</td>
+              <td>{p.phone}</td>
+              <td>{p.address}</td>
+              <td>{p.bloodGroup}</td>
               <td>
-                <button onClick={() => startEdit(p)} className="edit-btn">
-                  Edit
-                </button>
-                <button onClick={() => deletePatient(p.PatientID)}>X</button>
+                <button onClick={() => deletePatient(p.patientID)}>X</button>
               </td>
             </tr>
           ))}
