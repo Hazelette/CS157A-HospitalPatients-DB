@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { API_BASE } from "../config";
 import { useMergeState } from "../hooks/useMergeState";
 
 const EMPTY_FORM = {
@@ -10,92 +12,86 @@ const EMPTY_FORM = {
 };
 
 export function DoctorsPage() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [state, merge] = useMergeState({
-    doctors: [
-      {
-        DoctorID: 1,
-        DoctorName: "Dr. Smith",
-        Specialty: "Cardiology",
-        Phone: "555-1111",
-        Email: "smith@hospital.com",
-        DepartmentID: 1,
-      },
-    ],
+    doctors: [],
     searchName: "",
     searchID: "",
     ...EMPTY_FORM,
-    editingId: null,
   });
+
+  const loadDoctors = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${API_BASE}/doctors`);
+      if (!res.ok) throw new Error(`Failed to load doctors (${res.status})`);
+      const data = await res.json();
+      merge({ doctors: Array.isArray(data) ? data : [] });
+    } catch (e) {
+      setError(e.message || "Failed to load doctors.");
+      merge({ doctors: [] });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDoctors();
+  }, []);
 
   const update = (key, value) => merge({ [key]: value });
 
-  const addDoctor = () => {
+  const addDoctor = async () => {
     if (!state.DoctorID) return;
-    merge({
-      doctors: [
-        ...state.doctors,
-        {
-          DoctorID: parseInt(state.DoctorID, 10),
-          DoctorName: state.DoctorName,
-          Specialty: state.Specialty,
-          Phone: state.Phone,
-          Email: state.Email,
-          DepartmentID: state.DepartmentID ? parseInt(state.DepartmentID, 10) : null,
-        },
-      ],
-      ...EMPTY_FORM,
-    });
+    setError("");
+    try {
+      const payload = {
+        doctorID: parseInt(state.DoctorID, 10),
+        doctorName: state.DoctorName,
+        specialty: state.Specialty,
+        phone: state.Phone,
+        email: state.Email,
+        departmentID: state.DepartmentID ? parseInt(state.DepartmentID, 10) : null,
+      };
+      const res = await fetch(`${API_BASE}/doctors`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`Failed to create doctor (${res.status})`);
+      merge({ ...EMPTY_FORM });
+      await loadDoctors();
+    } catch (e) {
+      setError(e.message || "Failed to create doctor.");
+    }
   };
 
-  const deleteDoctor = (id) =>
-    merge((s) => ({ doctors: s.doctors.filter((d) => d.DoctorID !== id) }));
-
-  const startEdit = (doctor) =>
-    merge({
-      editingId: doctor.DoctorID,
-      DoctorID: doctor.DoctorID,
-      DoctorName: doctor.DoctorName,
-      Specialty: doctor.Specialty,
-      Phone: doctor.Phone,
-      Email: doctor.Email,
-      DepartmentID: doctor.DepartmentID || "",
-    });
-
-  const saveEdit = () => {
-    if (!state.DoctorID) return;
-    merge({
-      doctors: state.doctors.map((d) =>
-        d.DoctorID === state.editingId
-          ? {
-              DoctorID: parseInt(state.DoctorID, 10),
-              DoctorName: state.DoctorName,
-              Specialty: state.Specialty,
-              Phone: state.Phone,
-              Email: state.Email,
-              DepartmentID: state.DepartmentID ? parseInt(state.DepartmentID, 10) : null,
-            }
-          : d
-      ),
-      editingId: null,
-      ...EMPTY_FORM,
-    });
+  const deleteDoctor = async (id) => {
+    setError("");
+    try {
+      const res = await fetch(`${API_BASE}/doctors/${id}`, { method: "DELETE" });
+      if (!res.ok && res.status !== 404) {
+        throw new Error(`Failed to delete doctor (${res.status})`);
+      }
+      await loadDoctors();
+    } catch (e) {
+      setError(e.message || "Failed to delete doctor.");
+    }
   };
-
-  const cancelEdit = () =>
-    merge({
-      editingId: null,
-      ...EMPTY_FORM,
-    });
 
   const filtered = state.doctors.filter((d) => {
-    const nameMatch = d.DoctorName.toLowerCase().includes(state.searchName.toLowerCase());
-    const idMatch = d.DoctorID.toString().includes(state.searchID);
+    const nameMatch = String(d.doctorName ?? "").toLowerCase().includes(state.searchName.toLowerCase());
+    const idMatch = String(d.doctorID ?? "").includes(state.searchID);
     return (state.searchName === "" || nameMatch) && (state.searchID === "" || idMatch);
   });
 
   return (
     <div>
       <h2>Doctors</h2>
+      {loading && <p>Loading...</p>}
+      {!loading && error && <p>{error}</p>}
       <div className="search-bars">
         <input placeholder="Search by name..." value={state.searchName} onChange={(e) => update("searchName", e.target.value)} />
         <input placeholder="Search by ID..." value={state.searchID} onChange={(e) => update("searchID", e.target.value)} />
@@ -107,12 +103,7 @@ export function DoctorsPage() {
         <input placeholder="Phone" value={state.Phone} onChange={(e) => update("Phone", e.target.value)} />
         <input placeholder="Email" value={state.Email} onChange={(e) => update("Email", e.target.value)} />
         <input placeholder="Department ID" value={state.DepartmentID} onChange={(e) => update("DepartmentID", e.target.value)} />
-        <button onClick={state.editingId ? saveEdit : addDoctor}>{state.editingId ? "Save" : "Add"}</button>
-        {state.editingId && (
-          <button onClick={cancelEdit} className="cancel-btn">
-            Cancel
-          </button>
-        )}
+        <button onClick={addDoctor}>Add</button>
       </div>
       <table>
         <thead>
@@ -128,18 +119,15 @@ export function DoctorsPage() {
         </thead>
         <tbody>
           {filtered.map((d) => (
-            <tr key={d.DoctorID}>
-              <td>{d.DoctorID}</td>
-              <td>{d.DoctorName}</td>
-              <td>{d.Specialty}</td>
-              <td>{d.Phone}</td>
-              <td>{d.Email}</td>
-              <td>{d.DepartmentID}</td>
+            <tr key={d.doctorID}>
+              <td>{d.doctorID}</td>
+              <td>{d.doctorName}</td>
+              <td>{d.specialty}</td>
+              <td>{d.phone}</td>
+              <td>{d.email}</td>
+              <td>{d.departmentID}</td>
               <td>
-                <button onClick={() => startEdit(d)} className="edit-btn">
-                  Edit
-                </button>
-                <button onClick={() => deleteDoctor(d.DoctorID)}>X</button>
+                <button onClick={() => deleteDoctor(d.doctorID)}>X</button>
               </td>
             </tr>
           ))}

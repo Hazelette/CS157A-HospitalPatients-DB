@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { API_BASE } from "../config";
 import { useMergeState } from "../hooks/useMergeState";
 
@@ -8,165 +8,113 @@ const EMPTY_FORM = {
   DoctorID: "",
   AppointmentDate: "",
   AppointmentTime: "",
-  Status: "",
+  Status: "Scheduled",
 };
 
 export function AppointmentsPage() {
-  const [scheduleDate, setScheduleDate] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  });
-  const [scheduleFromDb, setScheduleFromDb] = useState([]);
-  const [scheduleLoading, setScheduleLoading] = useState(true);
-  const [scheduleError, setScheduleError] = useState(null);
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [scheduleDate, setScheduleDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [state, merge] = useMergeState({
-    appointments: [
-      {
-        AppointmentID: 1,
-        PatientID: 1,
-        DoctorID: 1,
-        AppointmentDate: "2024-05-20",
-        AppointmentTime: "10:00",
-        Status: "Scheduled",
-      },
-    ],
+    appointments: [],
     searchID: "",
     searchPatient: "",
     ...EMPTY_FORM,
-    editingId: null,
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setScheduleLoading(true);
-      setScheduleError(null);
-      try {
-        const res = await fetch(`${API_BASE}/appointments`);
-        if (!res.ok) throw new Error(`Could not load appointments (${res.status})`);
-        const data = await res.json();
-        if (!cancelled) setScheduleFromDb(Array.isArray(data) ? data : []);
-      } catch (e) {
-        if (!cancelled) {
-          setScheduleError(e.message || "Failed to fetch appointments.");
-          setScheduleFromDb([]);
-        }
-      } finally {
-        if (!cancelled) setScheduleLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const apptDay = (a) => String(a.appointmentDate ?? a.AppointmentDate ?? "").slice(0, 10);
-  const apptTime = (a) => {
-    const raw = a.appointmentTime ?? a.AppointmentTime;
-    return raw == null || raw === "" ? "—" : String(raw).slice(0, 8);
+  const loadAppointments = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${API_BASE}/appointments`);
+      if (!res.ok) throw new Error(`Failed to load appointments (${res.status})`);
+      const data = await res.json();
+      merge({ appointments: Array.isArray(data) ? data : [] });
+    } catch (e) {
+      setError(e.message || "Failed to load appointments.");
+      merge({ appointments: [] });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const appointmentsForPickDate = scheduleFromDb
-    .filter((a) => apptDay(a) === scheduleDate)
-    .slice()
-    .sort((a, b) => apptTime(a).localeCompare(apptTime(b)));
+  useEffect(() => {
+    loadAppointments();
+  }, []);
 
   const update = (key, value) => merge({ [key]: value });
 
-  const addAppointment = () => {
+  const addAppointment = async () => {
     if (!state.AppointmentID) return;
-    merge({
-      appointments: [
-        ...state.appointments,
-        {
-          AppointmentID: parseInt(state.AppointmentID, 10),
-          PatientID: state.PatientID ? parseInt(state.PatientID, 10) : null,
-          DoctorID: state.DoctorID ? parseInt(state.DoctorID, 10) : null,
-          AppointmentDate: state.AppointmentDate,
-          AppointmentTime: state.AppointmentTime,
-          Status: state.Status,
-        },
-      ],
-      ...EMPTY_FORM,
-    });
+    setError("");
+    try {
+      const payload = {
+        appointmentID: parseInt(state.AppointmentID, 10),
+        patientID: state.PatientID ? parseInt(state.PatientID, 10) : null,
+        doctorID: state.DoctorID ? parseInt(state.DoctorID, 10) : null,
+        appointmentDate: state.AppointmentDate || null,
+        appointmentTime: state.AppointmentTime || null,
+        status: state.Status || "Scheduled",
+      };
+      const res = await fetch(`${API_BASE}/appointments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`Failed to create appointment (${res.status})`);
+      merge({ ...EMPTY_FORM });
+      await loadAppointments();
+    } catch (e) {
+      setError(e.message || "Failed to create appointment.");
+    }
   };
 
-  const deleteAppointment = (id) =>
-    merge((s) => ({ appointments: s.appointments.filter((a) => a.AppointmentID !== id) }));
-
-  const startEdit = (appointment) =>
-    merge({
-      editingId: appointment.AppointmentID,
-      AppointmentID: appointment.AppointmentID,
-      PatientID: appointment.PatientID || "",
-      DoctorID: appointment.DoctorID || "",
-      AppointmentDate: appointment.AppointmentDate,
-      AppointmentTime: appointment.AppointmentTime,
-      Status: appointment.Status,
-    });
-
-  const saveEdit = () => {
-    if (!state.AppointmentID) return;
-    merge({
-      appointments: state.appointments.map((a) =>
-        a.AppointmentID === state.editingId
-          ? {
-              AppointmentID: parseInt(state.AppointmentID, 10),
-              PatientID: state.PatientID ? parseInt(state.PatientID, 10) : null,
-              DoctorID: state.DoctorID ? parseInt(state.DoctorID, 10) : null,
-              AppointmentDate: state.AppointmentDate,
-              AppointmentTime: state.AppointmentTime,
-              Status: state.Status,
-            }
-          : a
-      ),
-      editingId: null,
-      ...EMPTY_FORM,
-    });
+  const cancelAppointment = async (id) => {
+    setError("");
+    try {
+      const res = await fetch(`${API_BASE}/appointments/${id}/cancel`, { method: "PUT" });
+      if (!res.ok && res.status !== 404) {
+        throw new Error(`Failed to cancel appointment (${res.status})`);
+      }
+      await loadAppointments();
+    } catch (e) {
+      setError(e.message || "Failed to cancel appointment.");
+    }
   };
-
-  const cancelEdit = () =>
-    merge({
-      editingId: null,
-      ...EMPTY_FORM,
-    });
 
   const filtered = state.appointments.filter((a) => {
-    const idMatch = a.AppointmentID.toString().includes(state.searchID);
-    const patientMatch = a.PatientID.toString().includes(state.searchPatient);
+    const idMatch = String(a.appointmentID ?? "").includes(state.searchID);
+    const patientMatch = String(a.patientID ?? "").includes(state.searchPatient);
     return (state.searchID === "" || idMatch) && (state.searchPatient === "" || patientMatch);
   });
+
+  const appointmentsForPickDate = useMemo(
+    () =>
+      state.appointments
+        .filter((a) => String(a.appointmentDate ?? "").slice(0, 10) === scheduleDate)
+        .slice()
+        .sort((a, b) =>
+          String(a.appointmentTime ?? "").localeCompare(String(b.appointmentTime ?? ""))
+        ),
+    [state.appointments, scheduleDate]
+  );
 
   return (
     <div>
       <h2>Appointments</h2>
+      {loading && <p>Loading...</p>}
+      {!loading && error && <p>{error}</p>}
 
       <div className="appointments-schedule-preview">
         <h3 className="appointments-schedule-preview-title">Scheduled for date</h3>
-        <p className="appointments-schedule-preview-hint">
-          Pick a calendar day to list appointments from the database on that date (read-only).
-        </p>
         <div className="appointments-schedule-preview-controls">
           <label className="appointments-schedule-date-label">
             Date
-            <input
-              type="date"
-              value={scheduleDate}
-              onChange={(e) => setScheduleDate(e.target.value)}
-            />
+            <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
           </label>
         </div>
-        {scheduleLoading && (
-          <p className="appointments-schedule-preview-status">Loading schedule…</p>
-        )}
-        {!scheduleLoading && scheduleError && (
-          <p className="appointments-schedule-preview-error">{scheduleError}</p>
-        )}
-        {!scheduleLoading && !scheduleError && appointmentsForPickDate.length === 0 && (
-          <p className="appointments-schedule-preview-empty">No appointments on this date.</p>
-        )}
-        {!scheduleLoading && !scheduleError && appointmentsForPickDate.length > 0 && (
+        {!loading && appointmentsForPickDate.length === 0 && <p>No appointments on this date.</p>}
+        {!loading && appointmentsForPickDate.length > 0 && (
           <table className="appointments-schedule-table">
             <thead>
               <tr>
@@ -178,21 +126,15 @@ export function AppointmentsPage() {
               </tr>
             </thead>
             <tbody>
-              {appointmentsForPickDate.map((a) => {
-                const aid = a.appointmentID ?? a.AppointmentID;
-                const pid = a.patientID ?? a.PatientID;
-                const did = a.doctorID ?? a.DoctorID;
-                const stat = a.status ?? a.Status;
-                return (
-                  <tr key={aid}>
-                    <td>{aid}</td>
-                    <td>{pid}</td>
-                    <td>{did}</td>
-                    <td>{apptTime(a)}</td>
-                    <td>{stat}</td>
-                  </tr>
-                );
-              })}
+              {appointmentsForPickDate.map((a) => (
+                <tr key={a.appointmentID}>
+                  <td>{a.appointmentID}</td>
+                  <td>{a.patientID}</td>
+                  <td>{a.doctorID}</td>
+                  <td>{String(a.appointmentTime ?? "").slice(0, 8)}</td>
+                  <td>{a.status}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}
@@ -209,12 +151,7 @@ export function AppointmentsPage() {
         <input placeholder="Appointment Date" type="date" value={state.AppointmentDate} onChange={(e) => update("AppointmentDate", e.target.value)} />
         <input placeholder="Appointment Time" type="time" value={state.AppointmentTime} onChange={(e) => update("AppointmentTime", e.target.value)} />
         <input placeholder="Status" value={state.Status} onChange={(e) => update("Status", e.target.value)} />
-        <button onClick={state.editingId ? saveEdit : addAppointment}>{state.editingId ? "Save" : "Add"}</button>
-        {state.editingId && (
-          <button onClick={cancelEdit} className="cancel-btn">
-            Cancel
-          </button>
-        )}
+        <button onClick={addAppointment}>Add</button>
       </div>
       <table>
         <thead>
@@ -230,18 +167,15 @@ export function AppointmentsPage() {
         </thead>
         <tbody>
           {filtered.map((a) => (
-            <tr key={a.AppointmentID}>
-              <td>{a.AppointmentID}</td>
-              <td>{a.PatientID}</td>
-              <td>{a.DoctorID}</td>
-              <td>{a.AppointmentDate}</td>
-              <td>{a.AppointmentTime}</td>
-              <td>{a.Status}</td>
+            <tr key={a.appointmentID}>
+              <td>{a.appointmentID}</td>
+              <td>{a.patientID}</td>
+              <td>{a.doctorID}</td>
+              <td>{a.appointmentDate}</td>
+              <td>{String(a.appointmentTime ?? "").slice(0, 8)}</td>
+              <td>{a.status}</td>
               <td>
-                <button onClick={() => startEdit(a)} className="edit-btn">
-                  Edit
-                </button>
-                <button onClick={() => deleteAppointment(a.AppointmentID)}>X</button>
+                <button onClick={() => cancelAppointment(a.appointmentID)}>Cancel</button>
               </td>
             </tr>
           ))}

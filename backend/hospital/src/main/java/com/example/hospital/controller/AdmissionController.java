@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/admissions")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"})
 public class AdmissionController {
 
     private final AdmissionDAO admissionDAO;
