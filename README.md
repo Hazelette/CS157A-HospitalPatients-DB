@@ -98,6 +98,32 @@ View container logs:
 docker compose logs -f
 ```
 
+### 8. Docker Troubleshooting
+
+If something does not work on first run, try these fixes:
+
+- Port already in use:
+  - If `3000`, `8080`, or `3307` is already in use, stop the app using that port or change the port mapping in `docker-compose.yml`.
+
+- Missing `.env` or missing password:
+  - Ensure `.env` exists in the project root.
+  - Ensure `MYSQL_ROOT_PASSWORD` is set in `.env`.
+
+- Stale database volume / old seed data:
+  - Recreate containers and volumes:
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+- Services started but UI still fails:
+  - Check logs:
+```bash
+docker compose logs -f
+```
+  - Verify backend endpoint responds:
+    - `http://localhost:8080/patients`
+
 ## Overview
 Our project is a patient management system for hospitals that enables efficient tracking of patient locations, doctor-patient assignments, and appointment scheduling.
 
