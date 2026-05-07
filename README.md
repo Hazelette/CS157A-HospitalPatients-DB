@@ -1,4 +1,8 @@
-# CS157A-HospitalPatients-DB
+# <div align="center">CS157A-HospitalPatients-DB</div>
+<img width="2037" height="1071" alt="image" src="https://github.com/user-attachments/assets/24f04637-9274-4564-8005-261e0f1a3e83" />
+<br>
+<img width="2038" height="1056" alt="image" src="https://github.com/user-attachments/assets/5568f76e-4519-4e14-b861-95de168eaeda" />
+
 
 ## Usage
 
