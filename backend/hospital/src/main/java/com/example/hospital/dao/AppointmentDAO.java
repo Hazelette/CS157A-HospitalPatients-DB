@@ -11,6 +11,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.sql.Time;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -112,5 +114,44 @@ public class AppointmentDAO {
         }
 
         return null;
+    }
+
+    public boolean patientExists(int patientId) throws Exception {
+        String sql = "SELECT 1 FROM Patients WHERE PatientID = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, patientId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    public boolean doctorExists(int doctorId) throws Exception {
+        String sql = "SELECT 1 FROM Doctors WHERE DoctorID = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, doctorId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    public boolean hasConflictingAppointment(int doctorId, LocalDate date, LocalTime time) throws Exception {
+        String sql = """
+            SELECT 1 FROM Appointments
+            WHERE DoctorID = ? AND AppointmentDate = ? AND AppointmentTime = ?
+              AND Status <> 'Cancelled'
+            """;
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, doctorId);
+            stmt.setDate(2, Date.valueOf(date));
+            stmt.setTime(3, Time.valueOf(time));
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
     }
 }
