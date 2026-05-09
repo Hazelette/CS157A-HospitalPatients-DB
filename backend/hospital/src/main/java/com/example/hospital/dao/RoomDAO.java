@@ -23,16 +23,19 @@ public class RoomDAO {
     @Value("${spring.datasource.password}")
     private String dbPassword;
 
+    // Opens a JDBC connection using Spring datasource credentials.
     private Connection getConnection() throws Exception {
         return DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
     }
 
     public List<Room> getAllRooms() throws Exception {
+        // READ: fetches every room record.
         String sql = "SELECT RoomID, RoomNumber, Availability FROM Rooms";
         return queryRooms(sql, null);
     }
 
     public List<Room> getRoomsByAvailability(String availability) throws Exception {
+        // READ: fetches rooms filtered by availability status.
         String sql = "SELECT RoomID, RoomNumber, Availability FROM Rooms WHERE Availability = ?";
         return queryRooms(sql, availability);
     }
@@ -40,6 +43,7 @@ public class RoomDAO {
     private List<Room> queryRooms(String sql, String availability) throws Exception {
         List<Room> rooms = new ArrayList<>();
 
+        // Shared JDBC SELECT helper for room queries.
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -47,6 +51,7 @@ public class RoomDAO {
                 stmt.setString(1, availability);
             }
 
+            // ResultSet-to-model mapping for each room row.
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Room room = new Room();

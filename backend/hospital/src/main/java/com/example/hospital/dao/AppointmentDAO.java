@@ -28,18 +28,22 @@ public class AppointmentDAO {
     @Value("${spring.datasource.password}")
     private String dbPassword;
 
+    // Opens a JDBC connection using Spring datasource properties.
     private Connection getConnection() throws Exception {
         return DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
     }
 
     public List<Appointment> getAllAppointments() throws Exception {
         List<Appointment> appointments = new ArrayList<>();
+        // READ: fetches all appointments.
         String sql = "SELECT AppointmentID, PatientID, DoctorID, AppointmentDate, AppointmentTime, Status FROM Appointments";
 
+        // Execute SELECT and map rows to Appointment model objects.
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
+            // ResultSet-to-model mapping.
             while (rs.next()) {
                 Appointment appointment = new Appointment();
                 appointment.setAppointmentID(rs.getInt("AppointmentID"));
@@ -56,11 +60,13 @@ public class AppointmentDAO {
     }
 
     public Appointment createAppointment(Appointment appointment) throws Exception {
+        // CREATE: inserts a new appointment.
         String sql = """
             INSERT INTO Appointments (PatientID, DoctorID, AppointmentDate, AppointmentTime, Status)
             VALUES (?, ?, ?, ?, ?)
             """;
 
+        // Use RETURN_GENERATED_KEYS to capture the DB-generated AppointmentID.
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -71,6 +77,7 @@ public class AppointmentDAO {
             stmt.setString(5, appointment.getStatus());
             stmt.executeUpdate();
 
+            // Attach generated primary key back to the model.
             try (ResultSet keys = stmt.getGeneratedKeys()) {
                 if (keys.next()) {
                     appointment.setAppointmentID(keys.getInt(1));
@@ -82,7 +89,9 @@ public class AppointmentDAO {
     }
 
     public Appointment cancelAppointment(int id) throws Exception {
+        // UPDATE: marks an appointment as cancelled.
         String updateSql = "UPDATE Appointments SET Status = 'Cancelled' WHERE AppointmentID = ?";
+        // READ: re-fetches the updated appointment for API response.
         String selectSql = "SELECT AppointmentID, PatientID, DoctorID, AppointmentDate, AppointmentTime, Status FROM Appointments WHERE AppointmentID = ?";
 
         try (Connection conn = getConnection();
@@ -117,6 +126,7 @@ public class AppointmentDAO {
     }
 
     public boolean patientExists(int patientId) throws Exception {
+        // READ: existence check for foreign-key validation.
         String sql = "SELECT 1 FROM Patients WHERE PatientID = ?";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -128,6 +138,7 @@ public class AppointmentDAO {
     }
 
     public boolean doctorExists(int doctorId) throws Exception {
+        // READ: existence check for foreign-key validation.
         String sql = "SELECT 1 FROM Doctors WHERE DoctorID = ?";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -139,6 +150,7 @@ public class AppointmentDAO {
     }
 
     public boolean hasConflictingAppointment(int doctorId, LocalDate date, LocalTime time) throws Exception {
+        // READ: checks for another non-cancelled appointment in the same doctor/date/time slot.
         String sql = """
             SELECT 1 FROM Appointments
             WHERE DoctorID = ? AND AppointmentDate = ? AND AppointmentTime = ?

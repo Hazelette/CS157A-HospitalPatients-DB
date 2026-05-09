@@ -26,18 +26,22 @@ public class AdmissionDAO {
     @Value("${spring.datasource.password}")
     private String dbPassword;
 
+    // Opens a JDBC connection using Spring-configured datasource credentials.
     private Connection getConnection() throws Exception {
         return DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
     }
 
     public List<Admission> getAllAdmissions() throws Exception {
         List<Admission> admissions = new ArrayList<>();
+        // READ: fetches all admission records.
         String sql = "SELECT AdmissionID, PatientID, DoctorID, RoomID, AdmissionDate, DischargeDate, Diagnosis FROM Admissions";
 
+        // Execute SELECT query and iterate through the returned rows.
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
+            // Map each JDBC ResultSet row into an Admission model object.
             while (rs.next()) {
                 Admission admission = new Admission();
                 admission.setAdmissionID(rs.getInt("AdmissionID"));
@@ -58,13 +62,16 @@ public class AdmissionDAO {
     }
 
     public Admission createAdmission(Admission admission) throws Exception {
+        // CREATE: inserts a new admission row.
         String insertSql = """
             INSERT INTO Admissions (PatientID, DoctorID, RoomID, AdmissionDate, DischargeDate, Diagnosis)
             VALUES (?, ?, ?, ?, ?, ?)
             """;
+        // UPDATE: marks the assigned room as occupied after a successful active admission.
         String updateRoomSql = "UPDATE Rooms SET Availability = 'Occupied' WHERE RoomID = ?";
 
         try (Connection conn = getConnection()) {
+            // Start transaction so admission insert and room status update succeed/fail together.
             conn.setAutoCommit(false);
             try {
                 try (PreparedStatement stmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
@@ -82,6 +89,7 @@ public class AdmissionDAO {
                     stmt.setString(6, admission.getDiagnosis());
                     stmt.executeUpdate();
 
+                    // Read DB-generated primary key and set it on the model.
                     try (ResultSet keys = stmt.getGeneratedKeys()) {
                         if (keys.next()) {
                             admission.setAdmissionID(keys.getInt(1));
@@ -90,14 +98,17 @@ public class AdmissionDAO {
                 }
 
                 if (admission.getDischargeDate() == null) {
+                    // For currently admitted patients, reserve the room in the Rooms table.
                     try (PreparedStatement roomStmt = conn.prepareStatement(updateRoomSql)) {
                         roomStmt.setInt(1, admission.getRoomID());
                         roomStmt.executeUpdate();
                     }
                 }
 
+                // Persist both updates atomically.
                 conn.commit();
             } catch (Exception e) {
+                // Undo partial work if any statement fails.
                 conn.rollback();
                 throw e;
             }
@@ -107,11 +118,15 @@ public class AdmissionDAO {
     }
 
     public Admission dischargePatient(int admissionId, LocalDate dischargeDate) throws Exception {
+        // READ: loads the admission being discharged.
         String selectSql = "SELECT AdmissionID, PatientID, DoctorID, RoomID, AdmissionDate, DischargeDate, Diagnosis FROM Admissions WHERE AdmissionID = ?";
+        // UPDATE: sets discharge date on the admission.
         String updateAdmissionSql = "UPDATE Admissions SET DischargeDate = ? WHERE AdmissionID = ?";
+        // UPDATE: frees the room after discharge.
         String updateRoomSql = "UPDATE Rooms SET Availability = 'Available' WHERE RoomID = ?";
 
         try (Connection conn = getConnection()) {
+            // Transaction keeps admission/room state changes consistent.
             conn.setAutoCommit(false);
             try {
                 Admission admission;
@@ -144,10 +159,12 @@ public class AdmissionDAO {
                     roomStmt.executeUpdate();
                 }
 
+                // Commit discharge and room update together.
                 conn.commit();
                 admission.setDischargeDate(dischargeDate);
                 return admission;
             } catch (Exception e) {
+                // Roll back both updates on any failure.
                 conn.rollback();
                 throw e;
             }
@@ -167,6 +184,7 @@ public class AdmissionDAO {
     }
 
     public boolean isRoomAvailable(int roomId) throws Exception {
+        // READ: checks current room availability status.
         String sql = "SELECT Availability FROM Rooms WHERE RoomID = ?";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -178,6 +196,7 @@ public class AdmissionDAO {
     }
 
     private boolean existsBy(String table, String idColumn, int id) throws Exception {
+        // READ: generic existence check (returns at least one row when entity exists).
         String sql = "SELECT 1 FROM " + table + " WHERE " + idColumn + " = ?";
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
