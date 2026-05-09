@@ -24,26 +24,31 @@ public class DoctorDAO {
     @Value("${spring.datasource.password}")
     private String dbPassword;
 
+    // Opens a JDBC connection using Spring datasource credentials.
     private Connection getConnection() throws Exception {
         return DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
     }
 
     public List<Doctor> getAllDoctors() throws Exception {
+        // READ: fetches all doctors.
         String sql = "SELECT DoctorID, DoctorName, Specialty, Phone, Email, DepartmentID FROM Doctors";
         return queryDoctors(sql, null);
     }
 
     public List<Doctor> getDoctorsByDepartment(int departmentID) throws Exception {
+        // READ: fetches doctors in a specific department.
         String sql = "SELECT DoctorID, DoctorName, Specialty, Phone, Email, DepartmentID FROM Doctors WHERE DepartmentID = ?";
         return queryDoctors(sql, departmentID);
     }
 
     public Doctor createDoctor(Doctor doctor) throws Exception {
+        // CREATE: inserts a new doctor row.
         String sql = """
             INSERT INTO Doctors (DoctorName, Specialty, Phone, Email, DepartmentID)
             VALUES (?, ?, ?, ?, ?)
             """;
 
+        // Use RETURN_GENERATED_KEYS to capture DoctorID from the DB.
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -54,6 +59,7 @@ public class DoctorDAO {
             stmt.setInt(5, doctor.getDepartmentID());
             stmt.executeUpdate();
 
+            // Copy generated ID into response model.
             try (ResultSet keys = stmt.getGeneratedKeys()) {
                 if (keys.next()) {
                     doctor.setDoctorID(keys.getInt(1));
@@ -65,6 +71,7 @@ public class DoctorDAO {
     }
 
     public boolean deleteDoctor(int id) throws Exception {
+        // DELETE: removes a doctor by primary key.
         String sql = "DELETE FROM Doctors WHERE DoctorID = ?";
 
         try (Connection conn = getConnection();
@@ -77,6 +84,7 @@ public class DoctorDAO {
     private List<Doctor> queryDoctors(String sql, Integer departmentID) throws Exception {
         List<Doctor> doctors = new ArrayList<>();
 
+        // Shared JDBC helper for doctor SELECT queries.
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -84,6 +92,7 @@ public class DoctorDAO {
                 stmt.setInt(1, departmentID);
             }
 
+            // ResultSet-to-model mapping for each doctor row.
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Doctor doctor = new Doctor();

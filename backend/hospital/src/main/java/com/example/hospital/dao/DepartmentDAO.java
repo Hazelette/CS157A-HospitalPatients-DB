@@ -23,14 +23,17 @@ public class DepartmentDAO {
     @Value("${spring.datasource.password}")
     private String dbPassword;
 
+    // Opens a JDBC connection using Spring datasource credentials.
     private Connection getConnection() throws Exception {
         return DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
     }
 
     public List<Department> getAllDepartments() throws Exception {
         List<Department> departments = new ArrayList<>();
+        // READ: fetches all departments.
         String sql = "SELECT DepartmentID, DepartmentName, Location FROM Departments";
 
+        // Execute SELECT and map each row to a Department model.
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {

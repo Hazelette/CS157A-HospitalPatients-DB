@@ -25,14 +25,17 @@ public class PatientDAO {
     @Value("${spring.datasource.password}")
     private String dbPassword;
 
+    // Opens a JDBC connection using Spring datasource credentials.
     private Connection getConnection() throws Exception {
         return DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
     }
 
     public List<Patient> getAllPatients() throws Exception {
         List<Patient> patients = new ArrayList<>();
+        // READ: fetches all patient records.
         String sql = "SELECT PatientID, FirstName, LastName, Gender, DateOfBirth, Phone, Address, BloodGroup FROM Patients";
 
+        // Execute query and map each row to a Patient model object.
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
@@ -55,11 +58,13 @@ public class PatientDAO {
     }
 
     public Patient createPatient(Patient patient) throws Exception {
+        // CREATE: inserts a new patient.
         String sql = """
             INSERT INTO Patients (FirstName, LastName, Gender, DateOfBirth, Phone, Address, BloodGroup)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """;
 
+        // Request generated keys so the created PatientID can be returned.
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -73,6 +78,7 @@ public class PatientDAO {
 
             stmt.executeUpdate();
 
+            // Read generated PatientID from JDBC and attach it to model.
             try (ResultSet keys = stmt.getGeneratedKeys()) {
                 if (keys.next()) {
                     patient.setPatientID(keys.getInt(1));
@@ -84,6 +90,7 @@ public class PatientDAO {
     }
 
     public boolean deletePatient(int id) throws Exception {
+        // DELETE: removes patient row by primary key.
         String sql = "DELETE FROM Patients WHERE PatientID = ?";
 
         try (Connection conn = getConnection();
